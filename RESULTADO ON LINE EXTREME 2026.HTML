@@ -53,7 +53,6 @@
             width: 100%;
         }
 
-        /* Estilo do Relógio */
         .relogio-container {
             text-align: center;
             font-size: 3.5rem;
@@ -100,7 +99,6 @@
         }
         button:hover { background: var(--primary-hover); }
 
-        /* VIEW GERAL - Tabela de Resultados */
         .card {
             background: var(--bg-panel);
             border-radius: 8px;
@@ -109,7 +107,7 @@
             overflow-x: auto;
         }
 
-        table { width: 100%; border-collapse: collapse; min-width: 700px; }
+        table { width: 100%; border-collapse: collapse; min-width: 800px; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border); }
         th { background: rgba(0, 255, 136, 0.1); color: var(--primary); text-transform: uppercase; font-size: 0.9rem; }
         tr:hover { background: rgba(255, 255, 255, 0.02); }
@@ -127,7 +125,6 @@
         .status-danger { background: rgba(255, 68, 68, 0.2); color: var(--danger); }
         .text-especial { color: var(--warning); font-weight: bold; }
 
-        /* VIEW INDIVIDUAL - Relatório do Atleta */
         #view-individual {
             display: none;
             animation: fadeIn 0.3s ease-in-out;
@@ -146,6 +143,13 @@
         .relatorio-card h2 { font-size: 2.5rem; margin: 0 0 5px 0; color: white; }
         .relatorio-card h3 { font-size: 1.5rem; margin: 0 0 30px 0; color: var(--text-muted); font-weight: normal; }
         
+        .grid-colocacao {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
         .grid-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -162,14 +166,24 @@
 
         .stat-box .label { color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
         .stat-box .value { font-size: 1.8rem; font-weight: bold; color: var(--primary); font-family: monospace; }
-        .stat-box.destaque { border-color: var(--primary); background: rgba(0, 255, 136, 0.05); grid-column: 1 / -1; }
-        .stat-box.destaque .value { font-size: 2.5rem; }
-
+        
+        .stat-box.destaque-geral { border-color: var(--primary); background: rgba(0, 255, 136, 0.05); }
+        .stat-box.destaque-categoria { border-color: var(--warning); background: rgba(255, 152, 0, 0.05); }
+        .stat-box.destaque-tempo { border-color: var(--primary); background: rgba(0, 255, 136, 0.05); grid-column: 1 / -1; }
+        
         .colocacao-geral {
-            font-size: 4rem;
+            font-size: 3.5rem;
             color: white;
             text-shadow: 0 0 15px var(--primary);
-            margin: 20px 0;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .colocacao-categoria {
+            font-size: 3.5rem;
+            color: var(--warning);
+            text-shadow: 0 0 15px var(--warning);
+            margin: 10px 0;
             font-weight: bold;
         }
 
@@ -187,6 +201,10 @@
         }
 
         footer { text-align: center; padding: 15px; color: var(--text-muted); font-size: 0.8rem; margin-top: auto; }
+        
+        @media (max-width: 600px) {
+            .colocacao-geral, .colocacao-categoria { font-size: 2.5rem; }
+        }
     </style>
 </head>
 <body>
@@ -198,22 +216,20 @@
 
     <div class="container">
         
-        <!-- RELÓGIO ADICIONADO AQUI -->
         <div class="relogio-container" id="relogio-sistema">00:00:00</div>
 
-        <!-- CAIXA DE PESQUISA -->
         <div class="search-box" id="caixa-pesquisa">
             <input type="number" id="input-busca" placeholder="Digite o Número da Equipe..." onkeypress="verificarEnter(event)">
             <button onclick="buscarEquipe()">Buscar Resultado</button>
         </div>
 
-        <!-- VIEW GERAL (TABELA) -->
         <div id="view-geral" class="card">
             <table>
                 <thead>
                     <tr>
                         <th>Nº</th>
                         <th>Equipe</th>
+                        <th>Categoria</th>
                         <th>Status</th>
                         <th>Prevista</th>
                         <th>Largada</th>
@@ -227,12 +243,18 @@
             </table>
         </div>
 
-        <!-- VIEW INDIVIDUAL (RELATÓRIO) -->
         <div id="view-individual">
             <div class="relatorio-card">
-                <div class="stat-box destaque" style="margin-bottom: 20px; grid-column: auto;">
-                    <div class="label">COLOCAÇÃO GERAL</div>
-                    <div class="colocacao-geral" id="res-posicao">--</div>
+                
+                <div class="grid-colocacao">
+                    <div class="stat-box destaque-geral">
+                        <div class="label">COLOCAÇÃO GERAL</div>
+                        <div class="colocacao-geral" id="res-posicao-geral">--</div>
+                    </div>
+                    <div class="stat-box destaque-categoria">
+                        <div class="label" id="label-categoria">COLOCAÇÃO CATEGORIA</div>
+                        <div class="colocacao-categoria" id="res-posicao-categoria">--</div>
+                    </div>
                 </div>
 
                 <h2 id="res-numero">--</h2>
@@ -255,9 +277,9 @@
                         <div class="label">Chegada</div>
                         <div class="value" id="res-chegada">--:--:--</div>
                     </div>
-                    <div class="stat-box destaque">
+                    <div class="stat-box destaque-tempo">
                         <div class="label">Tempo Total</div>
-                        <div class="value" id="res-tempo">--:--:--</div>
+                        <div class="value" id="res-tempo" style="font-size: 2.5rem;">--:--:--</div>
                     </div>
                 </div>
 
@@ -273,7 +295,6 @@
     </footer>
 
     <script>
-        // === INICIANDO RELÓGIO DO SISTEMA ===
         window.onload = () => {
             iniciarRelogio();
         };
@@ -286,7 +307,6 @@
             }, 1000);
         }
 
-        // === CONFIGURAÇÃO DO FIREBASE ===
         const firebaseConfig = {
             apiKey: "AIzaSyBa648qCHHhvALs_K5qgeyuYPtOFdGRRP4",
             authDomain: "corrida-extreme-2026.firebaseapp.com",
@@ -298,7 +318,6 @@
             measurementId: "G-VPW10H47RZ"
         };
 
-        // INICIALIZAÇÃO FIREBASE
         firebase.initializeApp(firebaseConfig);
         const databaseRef = firebase.database().ref('magnetic_tempos');
 
@@ -306,7 +325,6 @@
         let rankingAtual = [];
         let visualizandoEquipeId = null;
 
-        // ESCUTA O BANCO EM TEMPO REAL
         databaseRef.on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -328,6 +346,7 @@
         function calcularRanking(equipes) {
             let copia = [...equipes];
             
+            // Ordena pelo menor tempo para gerar o Ranking
             copia.sort((a, b) => {
                 let pesoA = getPesoStatus(a.status);
                 let pesoB = getPesoStatus(b.status);
@@ -336,17 +355,33 @@
                 return 0;
             });
 
-            let posicaoAtual = 1;
+            let posicaoGeral = 1;
+            let posicoesPorCategoria = {}; // Dicionário para contar a posição de cada categoria
+
             copia.forEach(eq => {
+                // Lê a categoria do banco de dados (se não existir, coloca como GERAL)
+                let cat = eq.categoria ? eq.categoria.toUpperCase() : (eq.isEspecial ? "ESPECIAL" : "GERAL");
+                eq.categoriaExibicao = cat;
+
                 if(eq.status === 'CONCLUIDO') {
-                    eq.posicaoOficial = posicaoAtual + "º LUGAR";
-                    posicaoAtual++;
+                    // Posição Global
+                    eq.posicaoGeralText = posicaoGeral + "º LUGAR";
+                    posicaoGeral++;
+
+                    // Posição na Categoria Específica
+                    if(!posicoesPorCategoria[cat]) posicoesPorCategoria[cat] = 1; // Inicia o contador da categoria
+                    eq.posicaoCategoriaText = posicoesPorCategoria[cat] + "º LUGAR";
+                    posicoesPorCategoria[cat]++; // Aumenta o contador dessa categoria específica
+
                 } else if (eq.status === 'DESCLASSIFICADO') {
-                    eq.posicaoOficial = "DSQ";
+                    eq.posicaoGeralText = "DSQ";
+                    eq.posicaoCategoriaText = "DSQ";
                 } else if (eq.status === 'NAO_LARGOU') {
-                    eq.posicaoOficial = "DNS";
+                    eq.posicaoGeralText = "DNS";
+                    eq.posicaoCategoriaText = "DNS";
                 } else {
-                    eq.posicaoOficial = "Em prova...";
+                    eq.posicaoGeralText = "Em prova...";
+                    eq.posicaoCategoriaText = "Em prova...";
                 }
             });
 
@@ -382,6 +417,7 @@
                     <tr>
                         <td style="font-weight: bold; font-size: 1.2rem; color: var(--primary);">#${eq.numero}</td>
                         <td style="font-size: 1.1rem;">${nomeFormatado}</td>
+                        <td style="font-size: 0.9rem; color: var(--warning); font-weight: bold;">${eq.categoriaExibicao}</td>
                         <td><span class="status-badge ${badgeClass}">${statusLabel}</span></td>
                         <td style="font-family: monospace; color: var(--text-muted);">${eq.horaLargadaPrevista || '--:--'}</td>
                         <td style="font-family: monospace;">${eq.horaLargadaRealMs ? formatHoraMs(eq.horaLargadaRealMs) : '--:--:--'}</td>
@@ -410,7 +446,7 @@
             visualizandoEquipeId = equipe.id;
             preencherRelatorioIndividual(equipe);
 
-            document.getElementById('relogio-sistema').style.display = 'none'; // Oculta o relógio na tela individual
+            document.getElementById('relogio-sistema').style.display = 'none'; 
             document.getElementById('view-geral').style.display = 'none';
             document.getElementById('caixa-pesquisa').style.display = 'none';
             document.getElementById('view-individual').style.display = 'block';
@@ -420,7 +456,11 @@
         function preencherRelatorioIndividual(eq) {
             document.getElementById('res-numero').innerText = `Equipe Nº ${eq.numero}`;
             document.getElementById('res-nome').innerHTML = eq.isEspecial ? `${eq.nome} <span style="color:var(--warning)">⭐</span>` : eq.nome;
-            document.getElementById('res-posicao').innerText = eq.posicaoOficial;
+            
+            // Textos das Colocações
+            document.getElementById('res-posicao-geral').innerText = eq.posicaoGeralText;
+            document.getElementById('res-posicao-categoria').innerText = eq.posicaoCategoriaText;
+            document.getElementById('label-categoria').innerText = `CATEGORIA: ${eq.categoriaExibicao}`;
 
             let statusLabel = eq.status.replace('_', ' ');
             if (eq.status === 'CONCLUIDO') statusLabel = "PROVA CONCLUÍDA";
@@ -432,7 +472,6 @@
                 (eq.status === 'DESCLASSIFICADO' || eq.status === 'NAO_LARGOU') ? 'var(--danger)' : 'white';
 
             document.getElementById('res-prevista').innerText = eq.horaLargadaPrevista || '--:--';
-            
             document.getElementById('res-largada').innerText = eq.horaLargadaRealMs ? formatHoraMs(eq.horaLargadaRealMs) : '--:--:--';
             document.getElementById('res-chegada').innerText = eq.horaChegadaMs ? formatHoraMs(eq.horaChegadaMs) : '--:--:--';
             document.getElementById('res-tempo').innerText = eq.tempoTotalMs > 0 ? msToTime(eq.tempoTotalMs) : '--:--:--';
@@ -441,7 +480,7 @@
         function voltarParaGeral() {
             visualizandoEquipeId = null; 
             document.getElementById('view-individual').style.display = 'none';
-            document.getElementById('relogio-sistema').style.display = 'block'; // Mostra o relógio novamente
+            document.getElementById('relogio-sistema').style.display = 'block'; 
             document.getElementById('view-geral').style.display = 'block';
             document.getElementById('caixa-pesquisa').style.display = 'flex';
             renderizarTabelaGeral(); 
