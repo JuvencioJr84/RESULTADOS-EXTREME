@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultados Ao Vivo - Magnetic Estúdio</title>
+    
+    <!-- Bibliotecas do Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --bg-panel: #1e1e1e;
+            --primary: #00ff88;
+            --primary-hover: #00cc6a;
+            --danger: #ff4444;
+            --warning: #ff9800;
+            --text-light: #ffffff;
+            --text-muted: #aaaaaa;
+            --border: #333333;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body { 
+            background-color: var(--bg-dark); 
+            color: var(--text-light); 
+            margin: 0; 
+            padding: 0; 
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background-color: var(--bg-panel);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid var(--primary);
+            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.1);
+        }
+
+        h1 { margin: 0; color: var(--primary); text-transform: uppercase; letter-spacing: 2px; font-size: 1.8rem; }
+        .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-top: 5px; }
+
+        .container {
+            padding: 20px;
+            flex: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: var(--bg-panel);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 15px;
+            font-size: 1.2rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--primary);
+            color: white;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        button {
+            padding: 15px 25px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            background: var(--primary);
+            color: var(--bg-dark);
+            text-transform: uppercase;
+            transition: 0.3s;
+        }
+        button:hover { background: var(--primary-hover); }
+
+        /* VIEW GERAL - Tabela de Resultados */
+        .card {
+            background: var(--bg-panel);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            overflow-x: auto;
+        }
+
+        table { width: 100%; border-collapse: collapse; min-width: 700px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: rgba(0, 255, 136, 0.1); color: var(--primary); text-transform: uppercase; font-size: 0.9rem; }
+        tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .status-concluido { background: rgba(0, 255, 136, 0.2); color: var(--primary); }
+        .status-correndo { background: rgba(255, 152, 0, 0.2); color: var(--warning); }
+        .status-pendente { background: rgba(170, 170, 170, 0.2); color: var(--text-muted); }
+        .status-danger { background: rgba(255, 68, 68, 0.2); color: var(--danger); }
+        .text-especial { color: var(--warning); font-weight: bold; }
+
+        /* VIEW INDIVIDUAL - Relatório do Atleta */
+        #view-individual {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .relatorio-card {
+            background: var(--bg-panel);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.1);
+        }
+
+        .relatorio-card h2 { font-size: 2.5rem; margin: 0 0 5px 0; color: white; }
+        .relatorio-card h3 { font-size: 1.5rem; margin: 0 0 30px 0; color: var(--text-muted); font-weight: normal; }
+        
+        .grid-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: var(--bg-dark);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-box .label { color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+        .stat-box .value { font-size: 1.8rem; font-weight: bold; color: var(--primary); font-family: monospace; }
+        .stat-box.destaque { border-color: var(--primary); background: rgba(0, 255, 136, 0.05); grid-column: 1 / -1; }
+        .stat-box.destaque .value { font-size: 2.5rem; }
+
+        .colocacao-geral {
+            font-size: 4rem;
+            color: white;
+            text-shadow: 0 0 15px var(--primary);
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .btn-voltar {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            width: 100%;
+        }
+        .btn-voltar:hover { background: rgba(0, 255, 136, 0.1); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        footer { text-align: center; padding: 15px; color: var(--text-muted); font-size: 0.8rem; margin-top: auto; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 id="event-name">Aguardando Evento...</h1>
+        <div class="subtitle">🔴 Resultados Oficiais em Tempo Real</div>
+    </header>
+
+    <div class="container">
+        
+        <!-- CAIXA DE PESQUISA -->
+        <div class="search-box" id="caixa-pesquisa">
+            <input type="number" id="input-busca" placeholder="Digite o Número da Equipe..." onkeypress="verificarEnter(event)">
+            <button onclick="buscarEquipe()">Buscar Resultado</button>
+        </div>
+
+        <!-- VIEW GERAL (TABELA) -->
+        <div id="view-geral" class="card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nº</th>
+                        <th>Equipe</th>
+                        <th>Status</th>
+                        <th>Prevista</th> <!-- NOVO CAMPO -->
+                        <th>Largada</th>
+                        <th>Chegada</th>
+                        <th>Tempo Total</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-resultados">
+                    <!-- Preenchido via JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- VIEW INDIVIDUAL (RELATÓRIO) -->
+        <div id="view-individual">
+            <div class="relatorio-card">
+                <div class="stat-box destaque" style="margin-bottom: 20px; grid-column: auto;">
+                    <div class="label">COLOCAÇÃO GERAL</div>
+                    <div class="colocacao-geral" id="res-posicao">--</div>
+                </div>
+
+                <h2 id="res-numero">--</h2>
+                <h3 id="res-nome">--</h3>
+
+                <div class="grid-stats">
+                    <div class="stat-box">
+                        <div class="label">Status</div>
+                        <div class="value" id="res-status" style="font-size: 1.2rem; font-family: inherit;">--</div>
+                    </div>
+                    <!-- NOVO CAMPO NO RELATÓRIO INDIVIDUAL -->
+                    <div class="stat-box">
+                        <div class="label">Largada Prevista</div>
+                        <div class="value" id="res-prevista" style="color: var(--text-muted);">--:--</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Largada Real</div>
+                        <div class="value" id="res-largada">--:--:--</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Chegada</div>
+                        <div class="value" id="res-chegada">--:--:--</div>
+                    </div>
+                    <div class="stat-box destaque">
+                        <div class="label">Tempo Total</div>
+                        <div class="value" id="res-tempo">--:--:--</div>
+                    </div>
+                </div>
+
+                <button class="btn-voltar" onclick="voltarParaGeral()">⬅ Voltar para Resultados Gerais</button>
+            </div>
+        </div>
+
+    </div>
+
+    <footer>
+        Magnetic Estúdio - Controle de Tempos © 2026<br>
+        Criado por Juvencio Jr
+    </footer>
+
+    <script>
+        // === CONFIGURAÇÃO DO FIREBASE ===
+        const firebaseConfig = {
+            apiKey: "AIzaSyBa648qCHHhvALs_K5qgeyuYPtOFdGRRP4",
+            authDomain: "corrida-extreme-2026.firebaseapp.com",
+            databaseURL: "https://corrida-extreme-2026-default-rtdb.firebaseio.com",
+            projectId: "corrida-extreme-2026",
+            storageBucket: "corrida-extreme-2026.firebasestorage.app",
+            messagingSenderId: "950584976481",
+            appId: "1:950584976481:web:2c19463d9eb1380d48f620",
+            measurementId: "G-VPW10H47RZ"
+        };
+
+        // INICIALIZAÇÃO
+        firebase.initializeApp(firebaseConfig);
+        const databaseRef = firebase.database().ref('magnetic_tempos');
+
+        let dbLocal = { evento: {}, equipes: [] };
+        let rankingAtual = [];
+        let visualizandoEquipeId = null;
+
+        // ESCUTA O BANCO EM TEMPO REAL
+        databaseRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                dbLocal = data;
+                if (!dbLocal.equipes) dbLocal.equipes = [];
+                
+                document.getElementById('event-name').innerText = dbLocal.evento?.nome || "Evento sem nome";
+                rankingAtual = calcularRanking(dbLocal.equipes);
+
+                if (visualizandoEquipeId) {
+                    const eqAtualizada = rankingAtual.find(e => e.id === visualizandoEquipeId);
+                    if (eqAtualizada) preencherRelatorioIndividual(eqAtualizada);
+                } else {
+                    renderizarTabelaGeral();
+                }
+            }
+        });
+
+        function calcularRanking(equipes) {
+            let copia = [...equipes];
+            
+            copia.sort((a, b) => {
+                let pesoA = getPesoStatus(a.status);
+                let pesoB = getPesoStatus(b.status);
+                if (pesoA !== pesoB) return pesoA - pesoB; 
+                if (a.status === 'CONCLUIDO') return a.tempoTotalMs - b.tempoTotalMs; 
+                return 0;
+            });
+
+            let posicaoAtual = 1;
+            copia.forEach(eq => {
+                if(eq.status === 'CONCLUIDO') {
+                    eq.posicaoOficial = posicaoAtual + "º LUGAR";
+                    posicaoAtual++;
+                } else if (eq.status === 'DESCLASSIFICADO') {
+                    eq.posicaoOficial = "DSQ";
+                } else if (eq.status === 'NAO_LARGOU') {
+                    eq.posicaoOficial = "DNS";
+                } else {
+                    eq.posicaoOficial = "Em prova...";
+                }
+            });
+
+            return copia;
+        }
+
+        function getPesoStatus(status) {
+            if(status === 'CONCLUIDO') return 1;
+            if(status === 'CORRENDO') return 2;
+            if(status === 'NA_TELA' || status === 'PENDENTE') return 3;
+            if(status === 'NAO_LARGOU') return 4;
+            if(status === 'DESCLASSIFICADO') return 5;
+            return 99;
+        }
+
+        function renderizarTabelaGeral() {
+            const tbody = document.getElementById('tabela-resultados');
+            tbody.innerHTML = '';
+
+            rankingAtual.forEach(eq => {
+                let statusLabel = "";
+                let badgeClass = "";
+
+                if(eq.status === 'CONCLUIDO') { statusLabel = "Concluído"; badgeClass = "status-concluido"; }
+                else if(eq.status === 'CORRENDO') { statusLabel = "Na Trilha"; badgeClass = "status-correndo"; }
+                else if(eq.status === 'NAO_LARGOU') { statusLabel = "Não Largou"; badgeClass = "status-danger"; }
+                else if(eq.status === 'DESCLASSIFICADO') { statusLabel = "Desclassificado"; badgeClass = "status-danger"; }
+                else { statusLabel = "Aguardando"; badgeClass = "status-pendente"; }
+
+                let nomeFormatado = eq.isEspecial ? `<span class="text-especial">${eq.nome} ⭐</span>` : eq.nome;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="font-weight: bold; font-size: 1.2rem; color: var(--primary);">#${eq.numero}</td>
+                        <td style="font-size: 1.1rem;">${nomeFormatado}</td>
+                        <td><span class="status-badge ${badgeClass}">${statusLabel}</span></td>
+                        <td style="font-family: monospace; color: var(--text-muted);">${eq.horaLargadaPrevista || '--:--'}</td> <!-- LARGADA PREVISTA AQUI -->
+                        <td style="font-family: monospace;">${eq.horaLargadaRealMs ? formatHoraMs(eq.horaLargadaRealMs) : '--:--:--'}</td>
+                        <td style="font-family: monospace;">${eq.horaChegadaMs ? formatHoraMs(eq.horaChegadaMs) : '--:--:--'}</td>
+                        <td style="font-family: monospace; font-weight: bold;">${eq.tempoTotalMs > 0 ? msToTime(eq.tempoTotalMs) : '--:--:--'}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function verificarEnter(e) {
+            if (e.key === 'Enter') buscarEquipe();
+        }
+
+        function buscarEquipe() {
+            const input = document.getElementById('input-busca').value.trim();
+            if (!input) return alert("Digite o número da equipe para buscar!");
+
+            const equipe = rankingAtual.find(e => e.numero == input);
+            
+            if (!equipe) {
+                alert("Nenhuma equipe encontrada com o número " + input);
+                return;
+            }
+
+            visualizandoEquipeId = equipe.id;
+            preencherRelatorioIndividual(equipe);
+
+            document.getElementById('view-geral').style.display = 'none';
+            document.getElementById('caixa-pesquisa').style.display = 'none';
+            document.getElementById('view-individual').style.display = 'block';
+            document.getElementById('input-busca').value = ''; 
+        }
+
+        function preencherRelatorioIndividual(eq) {
+            document.getElementById('res-numero').innerText = `Equipe Nº ${eq.numero}`;
+            document.getElementById('res-nome').innerHTML = eq.isEspecial ? `${eq.nome} <span style="color:var(--warning)">⭐</span>` : eq.nome;
+            document.getElementById('res-posicao').innerText = eq.posicaoOficial;
+
+            let statusLabel = eq.status.replace('_', ' ');
+            if (eq.status === 'CONCLUIDO') statusLabel = "PROVA CONCLUÍDA";
+            if (eq.status === 'CORRENDO') statusLabel = "NA TRILHA";
+            document.getElementById('res-status').innerText = statusLabel;
+
+            document.getElementById('res-status').style.color = 
+                (eq.status === 'CONCLUIDO') ? 'var(--primary)' : 
+                (eq.status === 'DESCLASSIFICADO' || eq.status === 'NAO_LARGOU') ? 'var(--danger)' : 'white';
+
+            // PREENCHENDO O NOVO CAMPO DE LARGADA PREVISTA
+            document.getElementById('res-prevista').innerText = eq.horaLargadaPrevista || '--:--';
+            
+            document.getElementById('res-largada').innerText = eq.horaLargadaRealMs ? formatHoraMs(eq.horaLargadaRealMs) : '--:--:--';
+            document.getElementById('res-chegada').innerText = eq.horaChegadaMs ? formatHoraMs(eq.horaChegadaMs) : '--:--:--';
+            document.getElementById('res-tempo').innerText = eq.tempoTotalMs > 0 ? msToTime(eq.tempoTotalMs) : '--:--:--';
+        }
+
+        function voltarParaGeral() {
+            visualizandoEquipeId = null; 
+            document.getElementById('view-individual').style.display = 'none';
+            document.getElementById('view-geral').style.display = 'block';
+            document.getElementById('caixa-pesquisa').style.display = 'flex';
+            renderizarTabelaGeral(); 
+        }
+
+        function pad(num) { return num.toString().padStart(2, '0'); }
+
+        function formatHoraMs(ms) {
+            const d = new Date(ms);
+            return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        }
+
+        function msToTime(duration) {
+            let seconds = Math.floor((duration / 1000) % 60);
+            let minutes = Math.floor((duration / (1000 * 60)) % 60);
+            let hours = Math.floor((duration / (1000 * 60 * 60)) % 24);
+            return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+        }
+    </script>
+</body>
+</html>
