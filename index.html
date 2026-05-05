@@ -53,6 +53,18 @@
             width: 100%;
         }
 
+        /* Estilo do Relógio */
+        .relogio-container {
+            text-align: center;
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 20px;
+            font-family: monospace;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+            letter-spacing: 2px;
+        }
+
         .search-box {
             display: flex;
             gap: 10px;
@@ -186,6 +198,9 @@
 
     <div class="container">
         
+        <!-- RELÓGIO ADICIONADO AQUI -->
+        <div class="relogio-container" id="relogio-sistema">00:00:00</div>
+
         <!-- CAIXA DE PESQUISA -->
         <div class="search-box" id="caixa-pesquisa">
             <input type="number" id="input-busca" placeholder="Digite o Número da Equipe..." onkeypress="verificarEnter(event)">
@@ -200,7 +215,7 @@
                         <th>Nº</th>
                         <th>Equipe</th>
                         <th>Status</th>
-                        <th>Prevista</th> <!-- NOVO CAMPO -->
+                        <th>Prevista</th>
                         <th>Largada</th>
                         <th>Chegada</th>
                         <th>Tempo Total</th>
@@ -228,7 +243,6 @@
                         <div class="label">Status</div>
                         <div class="value" id="res-status" style="font-size: 1.2rem; font-family: inherit;">--</div>
                     </div>
-                    <!-- NOVO CAMPO NO RELATÓRIO INDIVIDUAL -->
                     <div class="stat-box">
                         <div class="label">Largada Prevista</div>
                         <div class="value" id="res-prevista" style="color: var(--text-muted);">--:--</div>
@@ -255,10 +269,23 @@
 
     <footer>
         Magnetic Estúdio - Controle de Tempos © 2026<br>
-        Criado por Juvencio Jr
+        Tecnologia oficial de cronometragem
     </footer>
 
     <script>
+        // === INICIANDO RELÓGIO DO SISTEMA ===
+        window.onload = () => {
+            iniciarRelogio();
+        };
+
+        function iniciarRelogio() {
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('relogio-sistema').innerText = 
+                    `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+            }, 1000);
+        }
+
         // === CONFIGURAÇÃO DO FIREBASE ===
         const firebaseConfig = {
             apiKey: "AIzaSyBa648qCHHhvALs_K5qgeyuYPtOFdGRRP4",
@@ -271,7 +298,7 @@
             measurementId: "G-VPW10H47RZ"
         };
 
-        // INICIALIZAÇÃO
+        // INICIALIZAÇÃO FIREBASE
         firebase.initializeApp(firebaseConfig);
         const databaseRef = firebase.database().ref('magnetic_tempos');
 
@@ -356,7 +383,7 @@
                         <td style="font-weight: bold; font-size: 1.2rem; color: var(--primary);">#${eq.numero}</td>
                         <td style="font-size: 1.1rem;">${nomeFormatado}</td>
                         <td><span class="status-badge ${badgeClass}">${statusLabel}</span></td>
-                        <td style="font-family: monospace; color: var(--text-muted);">${eq.horaLargadaPrevista || '--:--'}</td> <!-- LARGADA PREVISTA AQUI -->
+                        <td style="font-family: monospace; color: var(--text-muted);">${eq.horaLargadaPrevista || '--:--'}</td>
                         <td style="font-family: monospace;">${eq.horaLargadaRealMs ? formatHoraMs(eq.horaLargadaRealMs) : '--:--:--'}</td>
                         <td style="font-family: monospace;">${eq.horaChegadaMs ? formatHoraMs(eq.horaChegadaMs) : '--:--:--'}</td>
                         <td style="font-family: monospace; font-weight: bold;">${eq.tempoTotalMs > 0 ? msToTime(eq.tempoTotalMs) : '--:--:--'}</td>
@@ -383,6 +410,7 @@
             visualizandoEquipeId = equipe.id;
             preencherRelatorioIndividual(equipe);
 
+            document.getElementById('relogio-sistema').style.display = 'none'; // Oculta o relógio na tela individual
             document.getElementById('view-geral').style.display = 'none';
             document.getElementById('caixa-pesquisa').style.display = 'none';
             document.getElementById('view-individual').style.display = 'block';
@@ -403,7 +431,6 @@
                 (eq.status === 'CONCLUIDO') ? 'var(--primary)' : 
                 (eq.status === 'DESCLASSIFICADO' || eq.status === 'NAO_LARGOU') ? 'var(--danger)' : 'white';
 
-            // PREENCHENDO O NOVO CAMPO DE LARGADA PREVISTA
             document.getElementById('res-prevista').innerText = eq.horaLargadaPrevista || '--:--';
             
             document.getElementById('res-largada').innerText = eq.horaLargadaRealMs ? formatHoraMs(eq.horaLargadaRealMs) : '--:--:--';
@@ -414,6 +441,7 @@
         function voltarParaGeral() {
             visualizandoEquipeId = null; 
             document.getElementById('view-individual').style.display = 'none';
+            document.getElementById('relogio-sistema').style.display = 'block'; // Mostra o relógio novamente
             document.getElementById('view-geral').style.display = 'block';
             document.getElementById('caixa-pesquisa').style.display = 'flex';
             renderizarTabelaGeral(); 
